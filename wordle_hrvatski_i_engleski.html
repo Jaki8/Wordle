@@ -1,0 +1,765 @@
+<!DOCTYPE html>
+<html lang="hr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Wordle - Riječ Dana</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        correct: '#538d4e',
+                        present: '#b59f3b',
+                        absent: '#3a3a3c',
+                        absentLight: '#787c7e',
+                    },
+                    keyframes: {
+                        pop: {
+                            '0%': { transform: 'scale(1)' },
+                            '50%': { transform: 'scale(1.1)' },
+                            '100%': { transform: 'scale(1)' },
+                        },
+                        shake: {
+                            '0%, 100%': { transform: 'translateX(0)' },
+                            '20%, 60%': { transform: 'translateX(-5px)' },
+                            '40%, 80%': { transform: 'translateX(5px)' },
+                        },
+                        flip: {
+                            '0%': { transform: 'rotateX(0deg)' },
+                            '50%': { transform: 'rotateX(90deg)' },
+                            '100%': { transform: 'rotateX(0deg)' },
+                        }
+                    },
+                    animation: {
+                        pop: 'pop 0.1s ease-in-out',
+                        shake: 'shake 0.4s ease-in-out',
+                        flip: 'flip 0.5s ease-in-out forwards',
+                    }
+                }
+            }
+        }
+    </script>
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        /* Modern Scrollbars & Board styles */
+        body {
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+            touch-action: manipulation;
+        }
+        .tile-flip-0 { animation-delay: 0ms; }
+        .tile-flip-1 { animation-delay: 200ms; }
+        .tile-flip-2 { animation-delay: 400ms; }
+        .tile-flip-3 { animation-delay: 600ms; }
+        .tile-flip-4 { animation-delay: 800ms; }
+
+        /* Smooth flip transitions for colors */
+        .tile {
+            backface-visibility: hidden;
+            transition: background-color 0.25s ease, border-color 0.25s ease, color 0.25s ease;
+        }
+    </style>
+</head>
+<body class="bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-gray-100 min-h-screen flex flex-col justify-between transition-colors duration-200 select-none">
+
+    <!-- Header Navigation -->
+    <header class="border-b border-gray-200 dark:border-gray-800 px-4 py-3 max-w-lg mx-auto w-full flex justify-between items-center">
+        <div class="flex items-center space-x-2">
+            <button id="helpBtn" class="p-2 rounded-full hover:bg-gray-200 dark:hover:bg-gray-800 transition" title="Pravila">
+                <i data-lucide="help-circle" class="w-6 h-6"></i>
+            </button>
+            <button id="langBtn" class="px-2 py-1 text-xs font-bold rounded border border-gray-300 dark:border-gray-700 hover:bg-gray-200 dark:hover:bg-gray-800 transition" title="Promijeni jezik">
+                HR
+            </button>
+        </div>
+
+        <h1 class="text-2xl sm:text-3xl font-black tracking-widest text-center uppercase">WORDLE</h1>
+
+        <div class="flex items-center space-x-1 sm:space-x-2">
+            <button id="statsBtn" class="p-2 rounded-full hover:bg-gray-200 dark:hover:bg-gray-800 transition" title="Statistika">
+                <i data-lucide="bar-chart-2" class="w-6 h-6"></i>
+            </button>
+            <button id="themeBtn" class="p-2 rounded-full hover:bg-gray-200 dark:hover:bg-gray-800 transition" title="Svijetla / Tamna tema">
+                <i data-lucide="moon" id="themeIcon" class="w-6 h-6"></i>
+            </button>
+        </div>
+    </header>
+
+    <!-- Toast Messages -->
+    <div id="toastContainer" class="fixed top-16 left-1/2 transform -translate-x-1/2 z-50 flex flex-col items-center space-y-2 pointer-events-none"></div>
+
+    <!-- Main Content Grid -->
+    <main class="flex-grow flex flex-col justify-center items-center px-2 py-4">
+        <!-- Board -->
+        <div id="board" class="grid grid-rows-6 gap-1.5 sm:gap-2 p-2 max-w-xs sm:max-w-sm w-full aspect-[5/6]">
+            <!-- Rows generated dynamically -->
+        </div>
+    </main>
+
+    <!-- On-Screen Keyboard -->
+    <footer class="w-full max-w-lg mx-auto px-1 sm:px-2 pb-4 sm:pb-6">
+        <div id="keyboard" class="flex flex-col gap-1.5 sm:gap-2">
+            <!-- Keyboard rows generated dynamically -->
+        </div>
+    </footer>
+
+    <!-- Help Modal -->
+    <div id="helpModal" class="fixed inset-0 bg-black/60 backdrop-blur-sm hidden z-50 flex items-center justify-center p-4">
+        <div class="bg-white dark:bg-gray-800 rounded-2xl p-6 max-w-md w-full shadow-2xl relative border border-gray-100 dark:border-gray-700">
+            <button class="closeModal absolute top-4 right-4 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200">
+                <i data-lucide="x" class="w-6 h-6"></i>
+            </button>
+            <h2 class="text-2xl font-bold mb-4">Kako igrati?</h2>
+            <p class="text-sm mb-4 text-gray-600 dark:text-gray-300">Pogodite traženu riječ u 6 pokušaja.</p>
+            <ul class="text-sm space-y-2 mb-6 text-gray-600 dark:text-gray-300 list-disc list-inside">
+                <li>Svaki pokušaj mora biti valjana riječ od 5 slova.</li>
+                <li>Boja pločica mijenja se kako bi vam pokazala koliko ste bili blizu.</li>
+            </ul>
+
+            <div class="space-y-3 mb-6">
+                <div class="flex items-center gap-2">
+                    <div class="w-10 h-10 bg-correct text-white font-bold flex items-center justify-center rounded">S</div>
+                    <span class="text-xs sm:text-sm">Slovo **S** je u riječi i na točnom je mjestu.</span>
+                </div>
+                <div class="flex items-center gap-2">
+                    <div class="w-10 h-10 bg-present text-white font-bold flex items-center justify-center rounded">A</div>
+                    <span class="text-xs sm:text-sm">Slovo **A** je u riječi, ali na pogrešnom mjestu.</span>
+                </div>
+                <div class="flex items-center gap-2">
+                    <div class="w-10 h-10 bg-gray-500 text-white font-bold flex items-center justify-center rounded">K</div>
+                    <span class="text-xs sm:text-sm">Slovo **K** nije u riječi na bilo kojem mjestu.</span>
+                </div>
+            </div>
+
+            <button class="closeModal w-full py-3 bg-green-600 hover:bg-green-700 text-white font-bold rounded-xl transition">Igraj!</button>
+        </div>
+    </div>
+
+    <!-- Stats Modal -->
+    <div id="statsModal" class="fixed inset-0 bg-black/60 backdrop-blur-sm hidden z-50 flex items-center justify-center p-4">
+        <div class="bg-white dark:bg-gray-800 rounded-2xl p-6 max-w-md w-full shadow-2xl relative border border-gray-100 dark:border-gray-700">
+            <button class="closeModal absolute top-4 right-4 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200">
+                <i data-lucide="x" class="w-6 h-6"></i>
+            </button>
+            <h2 class="text-2xl font-bold text-center mb-6">STATISTIKA</h2>
+
+            <div class="grid grid-cols-4 gap-2 text-center mb-6">
+                <div class="p-2 bg-gray-100 dark:bg-gray-700/50 rounded-xl">
+                    <div id="statPlayed" class="text-2xl font-black">0</div>
+                    <div class="text-[10px] sm:text-xs text-gray-500 dark:text-gray-400 font-semibold uppercase">Odigrano</div>
+                </div>
+                <div class="p-2 bg-gray-100 dark:bg-gray-700/50 rounded-xl">
+                    <div id="statWinPct" class="text-2xl font-black">0</div>
+                    <div class="text-[10px] sm:text-xs text-gray-500 dark:text-gray-400 font-semibold uppercase">% Pobjeda</div>
+                </div>
+                <div class="p-2 bg-gray-100 dark:bg-gray-700/50 rounded-xl">
+                    <div id="statStreak" class="text-2xl font-black">0</div>
+                    <div class="text-[10px] sm:text-xs text-gray-500 dark:text-gray-400 font-semibold uppercase">Niz</div>
+                </div>
+                <div class="p-2 bg-gray-100 dark:bg-gray-700/50 rounded-xl">
+                    <div id="statMaxStreak" class="text-2xl font-black">0</div>
+                    <div class="text-[10px] sm:text-xs text-gray-500 dark:text-gray-400 font-semibold uppercase">Max Niz</div>
+                </div>
+            </div>
+
+            <!-- Distribution chart -->
+            <h3 class="text-sm font-bold mb-3 uppercase tracking-wider text-gray-500 dark:text-gray-400">Distribucija Pobjeda</h3>
+            <div id="guessDistribution" class="space-y-1.5 mb-6">
+                <!-- Dynamically loaded rows -->
+            </div>
+
+            <button id="newGameModalBtn" class="w-full py-3 bg-green-600 hover:bg-green-700 text-white font-bold rounded-xl transition shadow-lg shadow-green-600/30 flex items-center justify-center gap-2">
+                <i data-lucide="rotate-ccw" class="w-5 h-5"></i> Nova Igra
+            </button>
+        </div>
+    </div>
+
+    <!-- Game Over Modal -->
+    <div id="gameOverModal" class="fixed inset-0 bg-black/60 backdrop-blur-sm hidden z-50 flex items-center justify-center p-4">
+        <div class="bg-white dark:bg-gray-800 rounded-2xl p-6 max-w-md w-full shadow-2xl text-center relative border border-gray-100 dark:border-gray-700">
+            <button class="closeModal absolute top-4 right-4 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200">
+                <i data-lucide="x" class="w-6 h-6"></i>
+            </button>
+            <div id="gameOverTitle" class="text-3xl font-black mb-2">ČESTITAMO!</div>
+            <p id="gameOverSub" class="text-sm text-gray-500 dark:text-gray-400 mb-4">Pogodili ste riječ!</p>
+
+            <div class="my-4 py-3 px-4 bg-gray-100 dark:bg-gray-700/50 rounded-xl">
+                <div class="text-xs text-gray-400 uppercase tracking-wider font-bold mb-1">Tražena riječ</div>
+                <div id="secretWordDisplay" class="text-2xl font-black text-green-600 dark:text-green-400 tracking-widest uppercase">-----</div>
+            </div>
+
+            <div class="flex gap-3 mt-6">
+                <button id="shareBtn" class="flex-1 py-3 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl transition flex items-center justify-center gap-2 shadow-lg shadow-blue-600/30">
+                    <i data-lucide="share-2" class="w-5 h-5"></i> Podijeli
+                </button>
+                <button id="playAgainBtn" class="flex-1 py-3 bg-green-600 hover:bg-green-700 text-white font-bold rounded-xl transition flex items-center justify-center gap-2 shadow-lg shadow-green-600/30">
+                    <i data-lucide="rotate-ccw" class="w-5 h-5"></i> Nova Igra
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Logic Script -->
+    <script>
+        // Dictionary Data
+        const DICTIONARIES = {
+            HR: {
+                targetWords: [
+                    "KLUBA", "TRAVA", "SUNCE", "ZEMLJA", "ŠUMA", "RIJEK", "OBALA", "moreA", "VETAR", "OBLAK",
+                    "PTICA", "MAČKA", "PASJE", "KRAVA", "KONJS", "OVČAR", "RIBAA", "ŽABAa", "PČELA", "MUHAa",
+                    "KROV", "VRATA", "PROZO", "STOL", "STOLI", "ORMAR", "KREVET", "SLIKA", "LAMPA", "SVIJE",
+                    "SVIET", "KROSN", "POLJE", "CESTA", "ULICA", "GRADa", "SELOa", "ŠKOLA", "PRAVA", "KUPAC",
+                    "KVALI", "HRANA", "VODAa", "MLIJE", "KRUHa", "MESOa", "VOCEE", "POVRa", "KAVAa", "ČAJaa",
+                    "ŠEĆER", "SOLaa", "BAPKA", "DEDAa", "MAJKA", "OTACa", "BRATa", "SESTR", "SINaa", "KĆERa",
+                    "DJETE", "GLAVA", "RUKA", "NOGA", "OKOaa", "UHOaa", "NOSaa", "ZUBaa", "SRCEa", "KOŽAa",
+                    "SREĆA", "LJUBA", "MIRaa", "RADOA", "ŽELJA", "SNOVI", "MISLI", "RIJEČ", "SLOVO", "KNJIG",
+                    "PAPIR", "OLOVKA", "BOJAa", "SLIKA", "PESMA", "PLESa", "IGRAn", "SPORT", "LOPTU", "GOLaa",
+                    "PISMO", "KARTA", "IGRAA", "SLOVB", "ZVUKa", "MIRIS", "OKUSa", "DODIR", "TOPLO", "HLADN",
+                    "SVIJE", "TAMNO", "BIJEL", "CRNOa", "CRVEN", "PLAVO", "ŽUTOa", "ZELEN", "SIVOa", "ROZAa",
+                    "METAR", "LITRA", "KILOa", "TOČKA", "CRTAa", "KUTaa", "KRUGa", "KOCKA", "PIRAM", "ZVEZD",
+                    "MESEC", "DANaa", "NOĆaa", "JUTRO", "VEČER", "SATaa", "MINUT", "TJJED", "MESEC", "GODIN",
+                    "SJEVE", "JUGOa", "ISTOK", "ZAPAD", "BURAa", "JUGOa", "MAGLA", "KIŠAa", "SNJEG", "MRAZ"
+                ].map(w => w.substring(0, 5).toUpperCase()),
+                validWords: new Set()
+            },
+            EN: {
+                targetWords: [
+                    "APPLE", "BEACH", "CHAIR", "DANCE", "EAGLE", "FLAME", "GRAPE", "HOUSE", "IMAGE", "JUICE",
+                    "KNIFE", "LEMON", "MUSIC", "NIGHT", "OCEAN", "PIANO", "QUEEN", "RIVER", "SMILE", "TRAIN",
+                    "UNCLE", "VOICE", "WATER", "YOUTH", "ZEBRA", "BREAD", "CLOCK", "DREAM", "EARTH", "FRUIT",
+                    "GHOST", "HEART", "LIGHT", "MONEY", "PAPER", "PLANT", "RADIO", "SPACE", "TABLE", "WORLD"
+                ],
+                validWords: new Set()
+            }
+        };
+
+        // Extra valid word lists generated dynamically for smooth playability
+        const EXTRA_HR_WORDS = [
+            "SLOVO", "RIJEČ", "SREĆA", "LJUBA", "SNOVI", "KNJIG", "PAPIR", "OLOVKA", "SVIET", "ZEMLJ",
+            "KLUBA", "ŠKOLA", "STOLa", "KROVv", "PROZO", "CESTA", "ULICA", "HRANA", "VODAa", "MLIJE",
+            "KRUHa", "MESOa", "VOCEE", "KAVAa", "ČAJaa", "ŠEĆER", "MAJKA", "OTACa", "BRATa", "SESTR",
+            "GLAVA", "RUKAa", "NOGAa", "SRCEa", "KOŽAa", "PLAVO", "ŽUTOa", "ZELEN", "BIJEL", "CRNOa"
+        ].map(w => w.substring(0, 5).toUpperCase());
+
+        // Initialize valid word sets
+        DICTIONARIES.HR.targetWords.concat(EXTRA_HR_WORDS).forEach(w => DICTIONARIES.HR.validWords.add(w));
+        DICTIONARIES.EN.targetWords.forEach(w => DICTIONARIES.EN.validWords.add(w));
+
+        // Keyboard layouts
+        const KEYBOARDS = {
+            HR: [
+                ["Q", "W", "E", "R", "T", "Z", "U", "I", "O", "P", "Š", "Đ"],
+                ["A", "S", "D", "F", "G", "H", "J", "K", "L", "Č", "Ć"],
+                ["ENTER", "Y", "X", "C", "V", "B", "N", "M", "Ž", "BACKSPACE"]
+            ],
+            EN: [
+                ["Q", "W", "E", "R", "T", "Y", "U", "I", "O", "P"],
+                ["A", "S", "D", "F", "G", "H", "J", "K", "L"],
+                ["ENTER", "Z", "X", "C", "V", "B", "N", "M", "BACKSPACE"]
+            ]
+        };
+
+        // Game State
+        let currentLang = localStorage.getItem('wordle_lang') || 'HR';
+        let secretWord = "";
+        let currentRow = 0;
+        let currentTile = 0;
+        let guesses = Array(6).fill("");
+        let isGameOver = false;
+        let keyStates = {}; // { 'A': 'correct' | 'present' | 'absent' }
+
+        // Stats State
+        let stats = JSON.parse(localStorage.getItem('wordle_stats_' + currentLang)) || {
+            played: 0,
+            wins: 0,
+            streak: 0,
+            maxStreak: 0,
+            guesses: { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0, 6: 0 }
+        };
+
+        // DOM Elements
+        const boardEl = document.getElementById('board');
+        const keyboardEl = document.getElementById('keyboard');
+        const langBtn = document.getElementById('langBtn');
+        const themeBtn = document.getElementById('themeBtn');
+        const themeIcon = document.getElementById('themeIcon');
+        const statsBtn = document.getElementById('statsBtn');
+        const helpBtn = document.getElementById('helpBtn');
+
+        // Modals
+        const helpModal = document.getElementById('helpModal');
+        const statsModal = document.getElementById('statsModal');
+        const gameOverModal = document.getElementById('gameOverModal');
+
+        // Initialization
+        function initApp() {
+            setupTheme();
+            setupIcons();
+            setLanguage(currentLang, false);
+            setupEventListeners();
+        }
+
+        function setupIcons() {
+            if (window.lucide) {
+                lucide.createIcons();
+            }
+        }
+
+        // Theme management
+        function setupTheme() {
+            const isDark = localStorage.getItem('wordle_theme') === 'dark' || 
+                           (!localStorage.getItem('wordle_theme') && window.matchMedia('(prefers-color-scheme: dark)').matches);
+            if (isDark) {
+                document.documentElement.classList.add('dark');
+                themeIcon.setAttribute('data-lucide', 'sun');
+            } else {
+                document.documentElement.classList.remove('dark');
+                themeIcon.setAttribute('data-lucide', 'moon');
+            }
+            setupIcons();
+        }
+
+        function toggleTheme() {
+            const isDark = document.documentElement.classList.toggle('dark');
+            localStorage.setItem('wordle_theme', isDark ? 'dark' : 'light');
+            themeIcon.setAttribute('data-lucide', isDark ? 'sun' : 'moon');
+            setupIcons();
+        }
+
+        // Language Switcher
+        function setLanguage(lang, resetCurrentGame = true) {
+            currentLang = lang;
+            localStorage.setItem('wordle_lang', lang);
+            langBtn.innerText = lang;
+
+            // Load language stats
+            stats = JSON.parse(localStorage.getItem('wordle_stats_' + currentLang)) || {
+                played: 0,
+                wins: 0,
+                streak: 0,
+                maxStreak: 0,
+                guesses: { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0, 6: 0 }
+            };
+
+            startNewGame();
+        }
+
+        // Game Initialization
+        function startNewGame() {
+            const dict = DICTIONARIES[currentLang];
+            secretWord = dict.targetWords[Math.floor(Math.random() * dict.targetWords.length)];
+            
+            currentRow = 0;
+            currentTile = 0;
+            guesses = Array(6).fill("");
+            isGameOver = false;
+            keyStates = {};
+
+            createBoard();
+            createKeyboard();
+            closeAllModals();
+        }
+
+        // Board Construction
+        function createBoard() {
+            boardEl.innerHTML = '';
+            for (let r = 0; r < 6; r++) {
+                const rowEl = document.createElement('div');
+                rowEl.className = 'grid grid-cols-5 gap-1.5 sm:gap-2 w-full';
+                rowEl.id = `row-${r}`;
+
+                for (let c = 0; c < 5; c++) {
+                    const tileEl = document.createElement('div');
+                    tileEl.id = `tile-${r}-${c}`;
+                    tileEl.className = `tile aspect-square w-full border-2 border-gray-300 dark:border-gray-700 
+                                        flex items-center justify-center font-black text-xl sm:text-2xl uppercase 
+                                        rounded-lg select-none text-gray-900 dark:text-gray-100 bg-transparent`;
+                    rowEl.appendChild(tileEl);
+                }
+                boardEl.appendChild(rowEl);
+            }
+        }
+
+        // Keyboard Construction
+        function createKeyboard() {
+            keyboardEl.innerHTML = '';
+            const layout = KEYBOARDS[currentLang];
+
+            layout.forEach(row => {
+                const rowEl = document.createElement('div');
+                rowEl.className = 'flex justify-center gap-1 sm:gap-1.5 w-full';
+
+                row.forEach(key => {
+                    const button = document.createElement('button');
+                    button.dataset.key = key;
+                    
+                    let keyClass = `h-12 sm:h-14 font-bold rounded-lg text-xs sm:text-sm flex items-center justify-center 
+                                    transition-all duration-150 select-none cursor-pointer uppercase `;
+
+                    if (key === 'ENTER' || key === 'BACKSPACE') {
+                        keyClass += 'px-2 sm:px-3 bg-gray-300 dark:bg-gray-600 hover:bg-gray-400 dark:hover:bg-gray-500 text-xs flex-1 max-w-[65px]';
+                        button.innerHTML = key === 'ENTER' ? 'ENTER' : '<i data-lucide="delete" class="w-5 h-5"></i>';
+                    } else {
+                        keyClass += 'w-8 sm:w-10 bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 flex-1 max-w-[42px]';
+                        button.innerText = key;
+                    }
+
+                    button.className = keyClass;
+                    button.addEventListener('click', () => handleKeyPress(key));
+                    rowEl.appendChild(button);
+                });
+                keyboardEl.appendChild(rowEl);
+            });
+            setupIcons();
+        }
+
+        // Input Handler
+        function handleKeyPress(key) {
+            if (isGameOver) return;
+
+            const upperKey = key.toUpperCase();
+
+            if (upperKey === 'ENTER') {
+                submitGuess();
+            } else if (upperKey === 'BACKSPACE' || upperKey === 'BACK') {
+                deleteLetter();
+            } else if (isLetter(upperKey)) {
+                addLetter(upperKey);
+            }
+        }
+
+        function isLetter(str) {
+            return str.length === 1 && str.match(/[a-zA-ZČĆĐŠŽčćđšž]/i);
+        }
+
+        function addLetter(letter) {
+            if (currentTile < 5 && currentRow < 6) {
+                const tile = document.getElementById(`tile-${currentRow}-${currentTile}`);
+                tile.innerText = letter;
+                tile.classList.add('border-gray-500', 'dark:border-gray-400', 'animate-pop');
+                setTimeout(() => tile.classList.remove('animate-pop'), 100);
+
+                guesses[currentRow] += letter;
+                currentTile++;
+            }
+        }
+
+        function deleteLetter() {
+            if (currentTile > 0) {
+                currentTile--;
+                const tile = document.getElementById(`tile-${currentRow}-${currentTile}`);
+                tile.innerText = '';
+                tile.classList.remove('border-gray-500', 'dark:border-gray-400');
+                guesses[currentRow] = guesses[currentRow].slice(0, -1);
+            }
+        }
+
+        function submitGuess() {
+            const guess = guesses[currentRow];
+
+            if (guess.length !== 5) {
+                showToast(currentLang === 'HR' ? 'Premalo slova!' : 'Not enough letters!');
+                shakeRow(currentRow);
+                return;
+            }
+
+            const dict = DICTIONARIES[currentLang];
+            // If dictionary is extensive, check validWords. If word is not in set, reject.
+            if (!dict.validWords.has(guess) && !dict.targetWords.includes(guess)) {
+                showToast(currentLang === 'HR' ? 'Riječ nije na popisu!' : 'Not in word list!');
+                shakeRow(currentRow);
+                return;
+            }
+
+            revealGuess(guess);
+        }
+
+        function shakeRow(rowIdx) {
+            const row = document.getElementById(`row-${rowIdx}`);
+            row.classList.add('animate-shake');
+            setTimeout(() => row.classList.remove('animate-shake'), 400);
+        }
+
+        function revealGuess(guess) {
+            const row = document.getElementById(`row-${currentRow}`);
+            const secretArr = secretWord.split('');
+            const guessArr = guess.split('');
+            const tileStatuses = Array(5).fill('absent');
+
+            // Find correct letters (green)
+            guessArr.forEach((char, i) => {
+                if (char === secretArr[i]) {
+                    tileStatuses[i] = 'correct';
+                    secretArr[i] = null; // Mark as used
+                }
+            });
+
+            // Find present letters (yellow)
+            guessArr.forEach((char, i) => {
+                if (tileStatuses[i] !== 'correct') {
+                    const foundIdx = secretArr.indexOf(char);
+                    if (foundIdx !== -1) {
+                        tileStatuses[i] = 'present';
+                        secretArr[foundIdx] = null; // Mark as used
+                    }
+                }
+            });
+
+            // Lock typing while animating
+            isGameOver = true;
+
+            // Apply tile flip animation and colors
+            guessArr.forEach((char, i) => {
+                const tile = document.getElementById(`tile-${currentRow}-${i}`);
+                
+                setTimeout(() => {
+                    tile.classList.add('animate-flip', `tile-flip-${i}`);
+                    
+                    setTimeout(() => {
+                        tile.classList.remove('border-gray-300', 'dark:border-gray-700', 'border-gray-500', 'dark:border-gray-400');
+                        tile.classList.add('text-white');
+
+                        if (tileStatuses[i] === 'correct') {
+                            tile.classList.add('bg-correct', 'border-correct');
+                            updateKeyStatus(char, 'correct');
+                        } else if (tileStatuses[i] === 'present') {
+                            tile.classList.add('bg-present', 'border-present');
+                            updateKeyStatus(char, 'present');
+                        } else {
+                            tile.classList.add('bg-gray-500', 'dark:bg-gray-600', 'border-gray-500', 'dark:border-gray-600');
+                            updateKeyStatus(char, 'absent');
+                        }
+                    }, 250);
+                }, i * 200);
+            });
+
+            // After reveal ends
+            setTimeout(() => {
+                if (guess === secretWord) {
+                    handleWin();
+                } else if (currentRow === 5) {
+                    handleLoss();
+                } else {
+                    currentRow++;
+                    currentTile = 0;
+                    isGameOver = false; // unlock
+                }
+            }, 5 * 200 + 300);
+        }
+
+        function updateKeyStatus(letter, status) {
+            const currentStatus = keyStates[letter];
+            
+            // Priority: correct > present > absent
+            if (currentStatus === 'correct') return;
+            if (currentStatus === 'present' && status === 'absent') return;
+
+            keyStates[letter] = status;
+
+            const keyBtn = document.querySelector(`button[data-key="${letter}"]`);
+            if (!keyBtn) return;
+
+            keyBtn.classList.remove('bg-gray-200', 'dark:bg-gray-700', 'hover:bg-gray-300', 'dark:hover:bg-gray-600');
+            
+            if (status === 'correct') {
+                keyBtn.classList.add('bg-correct', 'text-white');
+            } else if (status === 'present') {
+                keyBtn.classList.add('bg-present', 'text-white');
+            } else {
+                keyBtn.classList.add('bg-gray-500', 'dark:bg-gray-800', 'text-white', 'opacity-50');
+            }
+        }
+
+        // Win/Loss Handlers
+        function handleWin() {
+            stats.played++;
+            stats.wins++;
+            stats.streak++;
+            if (stats.streak > stats.maxStreak) stats.maxStreak = stats.streak;
+            stats.guesses[currentRow + 1]++;
+            saveStats();
+
+            setTimeout(() => {
+                showGameOverModal(true);
+            }, 500);
+        }
+
+        function handleLoss() {
+            stats.played++;
+            stats.streak = 0;
+            saveStats();
+
+            setTimeout(() => {
+                showGameOverModal(false);
+            }, 500);
+        }
+
+        function saveStats() {
+            localStorage.setItem('wordle_stats_' + currentLang, JSON.stringify(stats));
+        }
+
+        // Modals Logic
+        function showGameOverModal(won) {
+            const titleEl = document.getElementById('gameOverTitle');
+            const subEl = document.getElementById('gameOverSub');
+            const wordEl = document.getElementById('secretWordDisplay');
+
+            if (won) {
+                titleEl.innerText = currentLang === 'HR' ? 'FANTASTIČNO!' : 'GREAT JOB!';
+                titleEl.className = 'text-3xl font-black mb-2 text-green-600 dark:text-green-400';
+                subEl.innerText = currentLang === 'HR' ? `Pogodili ste riječ u ${currentRow + 1}/6 pokušaja!` : `You guessed the word in ${currentRow + 1}/6 tries!`;
+            } else {
+                titleEl.innerText = currentLang === 'HR' ? 'VIŠE SREĆE DRUGI PUT!' : 'GAME OVER!';
+                titleEl.className = 'text-3xl font-black mb-2 text-red-600 dark:text-red-400';
+                subEl.innerText = currentLang === 'HR' ? 'Niste uspjeli pogoditi riječ.' : 'Better luck next time!';
+            }
+
+            wordEl.innerText = secretWord;
+            gameOverModal.classList.remove('hidden');
+        }
+
+        function renderStats() {
+            document.getElementById('statPlayed').innerText = stats.played;
+            document.getElementById('statWinPct').innerText = stats.played ? Math.round((stats.wins / stats.played) * 100) : 0;
+            document.getElementById('statStreak').innerText = stats.streak;
+            document.getElementById('statMaxStreak').innerText = stats.maxStreak;
+
+            const distEl = document.getElementById('guessDistribution');
+            distEl.innerHTML = '';
+
+            const maxVal = Math.max(...Object.values(stats.guesses), 1);
+
+            for (let i = 1; i <= 6; i++) {
+                const count = stats.guesses[i] || 0;
+                const pct = Math.max(8, Math.round((count / maxVal) * 100));
+
+                const row = document.createElement('div');
+                row.className = 'flex items-center gap-2 text-xs font-bold';
+                row.innerHTML = `
+                    <span class="w-2">${i}</span>
+                    <div class="flex-1 bg-gray-200 dark:bg-gray-700 rounded-full h-4 overflow-hidden">
+                        <div class="bg-green-600 text-white text-[10px] h-full flex items-center justify-end px-2 rounded-full transition-all duration-500" style="width: ${pct}%">
+                            ${count}
+                        </div>
+                    </div>
+                `;
+                distEl.appendChild(row);
+            }
+        }
+
+        function closeAllModals() {
+            helpModal.classList.add('hidden');
+            statsModal.classList.add('hidden');
+            gameOverModal.classList.add('hidden');
+        }
+
+        // Sharing logic
+        function shareResults() {
+            let resultText = `Wordle (${currentLang}) ${isGameOver && guesses[currentRow] === secretWord ? currentRow + 1 : 'X'}/6\n\n`;
+
+            for (let r = 0; r <= currentRow; r++) {
+                if (!guesses[r]) continue;
+                const guess = guesses[r];
+                const secretArr = secretWord.split('');
+                const rowEmojis = Array(5).fill('⬛');
+
+                // Correct green
+                for (let i = 0; i < 5; i++) {
+                    if (guess[i] === secretArr[i]) {
+                        rowEmojis[i] = '🟩';
+                        secretArr[i] = null;
+                    }
+                }
+                // Present yellow
+                for (let i = 0; i < 5; i++) {
+                    if (rowEmojis[i] !== '🟩') {
+                        const idx = secretArr.indexOf(guess[i]);
+                        if (idx !== -1) {
+                            rowEmojis[i] = '🟨';
+                            secretArr[idx] = null;
+                        }
+                    }
+                }
+                resultText += rowEmojis.join('') + '\n';
+            }
+
+            // Copy to clipboard fallback
+            if (navigator.clipboard && window.isSecureContext) {
+                navigator.clipboard.writeText(resultText).then(() => {
+                    showToast(currentLang === 'HR' ? 'Rezultat kopiran!' : 'Copied to clipboard!');
+                });
+            } else {
+                // ExecCommand fallback
+                const textArea = document.createElement('textarea');
+                textArea.value = resultText;
+                document.body.appendChild(textArea);
+                textArea.select();
+                document.execCommand('copy');
+                document.body.removeChild(textArea);
+                showToast(currentLang === 'HR' ? 'Rezultat kopiran!' : 'Copied to clipboard!');
+            }
+        }
+
+        // Toast messaging system
+        function showToast(msg) {
+            const container = document.getElementById('toastContainer');
+            const toast = document.createElement('div');
+            toast.className = 'bg-gray-900 dark:bg-gray-100 text-white dark:text-gray-900 px-4 py-2 rounded-lg font-bold text-sm shadow-xl transition-all duration-300 opacity-0 transform translate-y-2';
+            toast.innerText = msg;
+            
+            container.appendChild(toast);
+            
+            setTimeout(() => {
+                toast.classList.remove('opacity-0', 'translate-y-2');
+            }, 10);
+
+            setTimeout(() => {
+                toast.classList.add('opacity-0', '-translate-y-2');
+                setTimeout(() => toast.remove(), 300);
+            }, 2000);
+        }
+
+        // Event Listeners Setup
+        function setupEventListeners() {
+            // Physical Keyboard Listener
+            window.addEventListener('keydown', (e) => {
+                if (e.altKey || e.ctrlKey || e.metaKey) return;
+                handleKeyPress(e.key);
+            });
+
+            // Buttons
+            themeBtn.addEventListener('click', toggleTheme);
+            
+            langBtn.addEventListener('click', () => {
+                const nextLang = currentLang === 'HR' ? 'EN' : 'HR';
+                setLanguage(nextLang);
+                showToast(nextLang === 'HR' ? 'Jezik: Hrvatski' : 'Language: English');
+            });
+
+            statsBtn.addEventListener('click', () => {
+                renderStats();
+                statsModal.classList.remove('hidden');
+            });
+
+            helpBtn.addEventListener('click', () => {
+                helpModal.classList.remove('hidden');
+            });
+
+            document.querySelectorAll('.closeModal').forEach(btn => {
+                btn.addEventListener('click', closeAllModals);
+            });
+
+            document.getElementById('playAgainBtn').addEventListener('click', startNewGame);
+            document.getElementById('newGameModalBtn').addEventListener('click', startNewGame);
+            document.getElementById('shareBtn').addEventListener('click', shareResults);
+        }
+
+        // Start App
+        window.onload = initApp;
+    </script>
+</body>
+</html>
