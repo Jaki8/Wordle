@@ -1,0 +1,334 @@
+<!DOCTYPE html>
+<html lang="hr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Zaštita Bilja d.o.o. | Distribucija Poljoprivrednog Repromaterijala</title>
+    <style>
+        :root {
+            --primary-color: #2e7d32;
+            --secondary-color: #4caf50;
+            --accent-color: #fbc02d;
+            --dark-color: #1b5e20;
+            --light-bg: #f4f6f4;
+            --text-color: #333;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        body {
+            color: var(--text-color);
+            line-height: 1.6;
+            background-color: #fff;
+        }
+
+        /* Navigacija */
+        header {
+            background-color: #fff;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+        }
+
+        nav {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 1rem 2rem;
+        }
+
+        .logo {
+            font-size: 1.6rem;
+            font-weight: bold;
+            color: var(--primary-color);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .nav-links {
+            display: flex;
+            list-style: none;
+            gap: 2rem;
+        }
+
+        .nav-links a {
+            text-decoration: none;
+            color: var(--text-color);
+            font-weight: 600;
+            transition: color 0.3s;
+        }
+
+        .nav-links a:hover {
+            color: var(--primary-color);
+        }
+
+        /* Hero Sekcija */
+        .hero {
+            background: linear-gradient(rgba(0, 0, 0, 0.5), rgba(0, 0, 0, 0.5)), url('https://images.unsplash.com/photo-1500382017468-9049fed747ef?auto=format&fit=crop&w=1600&q=80') center/cover no-repeat;
+            height: 70vh;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+            color: #fff;
+            padding: 0 1rem;
+        }
+
+        .hero h1 {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+        }
+
+        .hero p {
+            font-size: 1.25rem;
+            max-width: 800px;
+            margin-bottom: 2rem;
+        }
+
+        .btn {
+            display: inline-block;
+            background-color: var(--secondary-color);
+            color: #fff;
+            padding: 0.8rem 1.8rem;
+            border-radius: 5px;
+            text-decoration: none;
+            font-weight: bold;
+            transition: background 0.3s;
+        }
+
+        .btn:hover {
+            background-color: var(--dark-color);
+        }
+
+        /* Sekcije Općenito */
+        section {
+            padding: 5rem 2rem;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .section-title {
+            text-align: center;
+            font-size: 2.2rem;
+            color: var(--primary-color);
+            margin-bottom: 3rem;
+            position: relative;
+        }
+
+        .section-title::after {
+            content: '';
+            width: 80px;
+            height: 4px;
+            background-color: var(--accent-color);
+            display: block;
+            margin: 10px auto 0;
+            border-radius: 2px;
+        }
+
+        /* Grid i Kartice */
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 2rem;
+        }
+
+        .card {
+            background: #fff;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.08);
+            border: 1px solid #eee;
+            transition: transform 0.3s;
+        }
+
+        .card:hover {
+            transform: translateY(-5px);
+        }
+
+        .card-body {
+            padding: 1.5rem;
+        }
+
+        .card-title {
+            font-size: 1.3rem;
+            color: var(--primary-color);
+            margin-bottom: 0.8rem;
+        }
+
+        /* Sezonska ponuda */
+        .seasonal-bg {
+            background-color: var(--light-bg);
+        }
+
+        .badge {
+            background-color: var(--accent-color);
+            color: #333;
+            padding: 0.3rem 0.8rem;
+            font-size: 0.8rem;
+            font-weight: bold;
+            border-radius: 3px;
+            display: inline-block;
+            margin-bottom: 0.5rem;
+        }
+
+        /* Veleprodaja */
+        .features-list {
+            list-style: none;
+            margin-top: 1rem;
+        }
+
+        .features-list li {
+            margin-bottom: 0.8rem;
+            padding-left: 1.5rem;
+            position: relative;
+        }
+
+        .features-list li::before {
+            content: "✓";
+            color: var(--secondary-color);
+            font-weight: bold;
+            position: absolute;
+            left: 0;
+        }
+
+        /* Poljoprivredne Apoteke */
+        .pharmacy-card {
+            background: var(--light-bg);
+            border-left: 5px solid var(--primary-color);
+            padding: 1.5rem;
+            border-radius: 0 8px 8px 0;
+        }
+
+        .pharmacy-card h3 {
+            color: var(--primary-color);
+            margin-bottom: 0.5rem;
+        }
+
+        /* Kontakt Sekcija */
+        .contact-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 3rem;
+        }
+
+        .contact-info p {
+            margin-bottom: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .contact-form form {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+
+        .contact-form input, 
+        .contact-form textarea {
+            width: 100%;
+            padding: 0.8rem;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            font-size: 1rem;
+        }
+
+        .contact-form button {
+            cursor: pointer;
+            border: none;
+        }
+
+        /* Podnožje */
+        footer {
+            background-color: var(--dark-color);
+            color: #fff;
+            text-align: center;
+            padding: 2rem 1rem;
+            margin-top: 3rem;
+        }
+
+        /* Responzivnost */
+        @media (max-width: 768px) {
+            .nav-links {
+                display: none;
+            }
+            .hero h1 {
+                font-size: 2rem;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Navigacija -->
+    <header>
+        <nav>
+            <div class="logo">🌿 Zaštita Bilja</div>
+            <ul class="nav-links">
+                <li><a href="#pocetna">Početna</a></li>
+                <li><a href="#sezonska-ponuda">Sezonska Ponuda</a></li>
+                <li><a href="#veleprodaja">Veleprodaja</a></li>
+                <li><a href="#maloprodaja">Maloprodaja</a></li>
+                <li><a href="#kontakt">Kontakt</a></li>
+            </ul>
+        </nav>
+    </header>
+
+    <!-- Hero Sekcija -->
+    <section id="pocetna" class="hero">
+        <h1>Pouzdana zaštita za vaš prinos</h1>
+        <p>Vodeći distributer poljoprivrednog repromaterijala diljem Hrvatske. Veleprodajna mreža i stručne poljoprivredne apoteke na usluzi vašem gospodarstvu.</p>
+        <a href="#sezonska-ponuda" class="btn">Pogledajte Sezonsku Ponudu</a>
+    </section>
+
+    <!-- Sezonska Ponuda -->
+    <div class="seasonal-bg">
+        <section id="sezonska-ponuda">
+            <h2 class="section-title">Sezonska Ponuda</h2>
+            <div class="grid">
+                <div class="card">
+                    <div class="card-body">
+                        <span class="badge">PROLJEĆE / LJETO</span>
+                        <h3 class="card-title">Sredstva za Zaštitu Bilja</h3>
+                        <p>Vrhunski fungicidi, insekticidi i herbicidi renomiranih svjetskih proizvođača za sve vrste poljoprivrednih kultura.</p>
+                    </div>
+                </div>
+                <div class="card">
+                    <div class="card-body">
+                        <span class="badge">PREPORUKA SEZONE</span>
+                        <h3 class="card-title">Mineralna i Organska Gnojiva</h3>
+                        <p>Vodottopiva, tekuća i peletirana gnojiva prilagođena specifičnim potrebama tla i fazama rasta biljaka.</p>
+                    </div>
+                </div>
+                <div class="card">
+                    <div class="card-body">
+                        <span class="badge">CERTIFICIRANO SE
+MENJE</span>
+                        <h3 class="card-title">Sjemenski Materijal</h3>
+                        <p>Visokokvalitetno sjeme žitarica, kukuruza, povrća i travnih smjesa visoke klijavosti i otpornosti.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </div>
+
+    <!-- Veleprodaja -->
+    <section id="veleprodaja">
+        <h2 class="section-title">Veleprodaja Repromaterijala</h2>
+        <div class="grid">
+            <div>
+                <h3 style="color: var(--primary-color); margin-bottom: 1rem;">Distribucija diljem Hrvatske</h3>
+                <p>Kao pouzdan partner poljoprivrednim zadrugama, OPG-ovima i trgovinama, osiguravamo brzu i stabilnu isporuku repromaterijala na području cijele Republike Hrvatske.</p>
+                <ul class="features-list">
+                    <li>Direktna dostava na vašu adresu ili skladište</li>
+                    <li>Povoljne vele
